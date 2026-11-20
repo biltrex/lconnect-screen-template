@@ -1,0 +1,5 @@
+schema_version: "1.1"
+name: new-screen-from-description
+expected_outcome: |
+  A new 1920x480 synthwave HTML design following the contract, built into a .template with live CPUTEMP,
+  GPUTEMP, GPULOAD, RAM and TIME widgets, previews that match the design, fonts usable by the service.

@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: convert-claude-design-mockup
+expected_outcome: |
+  An adapted copy of the JS-built mockup with data-lc slots (original untouched), built into a .template that passes
+  the device render and frame-size checks, with previews matching the design and a clear list of native limits
+  (full weekday name, red alert colour, KB/s vs MB/s, uppercase text, units glued to numbers).

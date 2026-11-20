@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: gauge-dashboard-from-description
+expected_outcome: |
+  A new 1920x480 design using native needle (GraphClock), arc (GraphArchBar), chart (GraphLine) and clock-hand slots, built into a .template that passes the device render, with previews matching the design.

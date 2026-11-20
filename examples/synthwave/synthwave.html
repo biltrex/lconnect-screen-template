@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<!-- Synthwave sensor screen for the Lian Li Universal Screen 8.8" (1920x480).
+     Follows the lconnect-screen-template design contract. Font: Bahnschrift (ships with Windows). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Synthwave screen</title>
+<style>
+  html, body { margin:0; width:1920px; height:480px; overflow:hidden; background:#000; }
+  body { position:relative; font-family:'Bahnschrift', sans-serif; color:#FFF; }
+  .abs { position:absolute; }
+
+  /* ---------- static art ---------- */
+  .sky { position:absolute; left:0; top:0; width:1920px; height:330px;
+         background:linear-gradient(180deg,#07011A 0%,#1A0538 45%,#4A0D5E 80%,#8A1A6E 100%); }
+  .stars { position:absolute; left:0; top:0; width:1920px; height:300px;
+           background-image:
+             radial-gradient(1.5px 1.5px at 120px 40px,#fff8,transparent),
+             radial-gradient(1px 1px at 300px 120px,#fff9,transparent),
+             radial-gradient(1.5px 1.5px at 700px 60px,#fff7,transparent),
+             radial-gradient(1px 1px at 1250px 30px,#fffa,transparent),
+             radial-gradient(1.5px 1.5px at 1500px 140px,#fff7,transparent),
+             radial-gradient(1px 1px at 1720px 70px,#fff9,transparent),
+             radial-gradient(1px 1px at 640px 200px,#fff6,transparent),
+             radial-gradient(1.5px 1.5px at 1180px 210px,#fff6,transparent); }
+  .sun { position:absolute; left:790px; top:170px; width:340px; height:340px; border-radius:50%;
+         background:linear-gradient(180deg,#FFE45C 0%,#FF9A3C 40%,#FF2E97 75%,#B0157A 100%);
+         box-shadow:0 0 60px 10px #FF2E9766;
+         -webkit-mask:linear-gradient(180deg,#000 0 52%,transparent 52% 56%,#000 56% 64%,transparent 64% 69%,
+                       #000 69% 75%,transparent 75% 81%,#000 81% 86%,transparent 86% 93%,#000 93%);
+         mask:linear-gradient(180deg,#000 0 52%,transparent 52% 56%,#000 56% 64%,transparent 64% 69%,
+                       #000 69% 75%,transparent 75% 81%,#000 81% 86%,transparent 86% 93%,#000 93%); }
+  .mount { position:absolute; left:0; top:250px; width:1920px; height:82px; }
+  .floor { position:absolute; left:0; top:330px; width:1920px; height:150px; overflow:hidden;
+           background:linear-gradient(180deg,#2A0638 0%,#0A0118 100%); }
+  .grid { position:absolute; left:-960px; top:0; width:3840px; height:420px;
+          transform-origin:50% 0; transform:perspective(260px) rotateX(62deg);
+          background-image:
+            linear-gradient(90deg,#FF2E97 2px,transparent 2px),
+            linear-gradient(0deg,#FF2E97 2px,transparent 2px);
+          background-size:80px 80px; background-position:center top; opacity:.85; }
+  .horizon { position:absolute; left:0; top:328px; width:1920px; height:3px; background:#FF7AD9;
+             box-shadow:0 0 18px 4px #FF2E97; }
+
+  .panel { position:absolute; border-radius:14px; background:#0B0220F2; }
+  .panel.cyan { border:2px solid #00E5FF; box-shadow:0 0 18px #00E5FF88, inset 0 0 18px #00E5FF33; }
+  .panel.pink { border:2px solid #FF2E97; box-shadow:0 0 18px #FF2E9788, inset 0 0 18px #FF2E9733; }
+  .label { position:absolute; font-size:26px; font-weight:400; letter-spacing:6px; }
+  .unit  { position:absolute; font-size:42px; font-weight:300; }
+  .big   { position:absolute; font-weight:600; line-height:1; text-align:right; }
+  .rule  { position:absolute; height:2px; }
+
+  .track { position:absolute; display:flex; }
+  .track i { flex:1; display:block; }
+</style>
+</head>
+<body>
+  <!-- scene -->
+  <div class="sky"></div>
+  <div class="stars"></div>
+  <div class="sun"></div>
+  <svg class="mount" viewBox="0 0 1920 82" preserveAspectRatio="none">
+    <polygon fill="#16042C" points="0,82 0,50 90,20 170,48 260,8 360,52 450,30 560,62 640,40 700,82"/>
+    <polygon fill="#16042C" points="1220,82 1290,44 1380,64 1470,14 1560,46 1650,26 1760,58 1850,22 1920,40 1920,82"/>
+    <polyline fill="none" stroke="#00E5FF" stroke-width="2" opacity=".7"
+              points="0,50 90,20 170,48 260,8 360,52 450,30 560,62 640,40 700,82"/>
+    <polyline fill="none" stroke="#00E5FF" stroke-width="2" opacity=".7"
+              points="1220,82 1290,44 1380,64 1470,14 1560,46 1650,26 1760,58 1850,22 1920,40"/>
+  </svg>
+  <div class="floor"><div class="grid"></div></div>
+  <div class="horizon"></div>
+
+  <!-- left panel: temperatures -->
+  <div class="panel cyan" style="left:36px;top:28px;width:584px;height:424px"></div>
+  <div class="label" style="left:76px;top:58px;color:#00E5FF;text-shadow:0 0 10px #00E5FF">CPU TEMP</div>
+  <div class="label" style="left:350px;top:58px;color:#FF2E97;text-shadow:0 0 10px #FF2E97">GPU TEMP</div>
+  <div class="rule" style="left:76px;top:100px;width:230px;background:linear-gradient(90deg,#00E5FF,transparent)"></div>
+  <div class="rule" style="left:350px;top:100px;width:230px;background:linear-gradient(90deg,#FF2E97,transparent)"></div>
+  <div class="unit" style="left:270px;top:146px;color:#7FF4FF">°C</div>
+  <div class="unit" style="left:544px;top:146px;color:#FF8CC6">°C</div>
+  <div class="label" style="left:76px;top:400px;font-size:18px;letter-spacing:4px;color:#8A6FB0">0</div>
+  <div class="label" style="left:254px;top:400px;font-size:18px;letter-spacing:4px;color:#8A6FB0">110</div>
+  <div class="label" style="left:350px;top:400px;font-size:18px;letter-spacing:4px;color:#8A6FB0">0</div>
+  <div class="label" style="left:528px;top:400px;font-size:18px;letter-spacing:4px;color:#8A6FB0">100</div>
+
+  <!-- centre: clock above the sun -->
+  <div class="label" style="left:660px;top:22px;width:600px;text-align:center;font-size:20px;letter-spacing:12px;color:#FFB3E0;text-shadow:0 0 8px #FF2E97">— LOCAL TIME —</div>
+
+  <!-- right panel: GPU load + RAM -->
+  <div class="panel pink" style="left:1300px;top:28px;width:584px;height:424px"></div>
+  <div class="label" style="left:1340px;top:58px;color:#FF2E97;text-shadow:0 0 10px #FF2E97">GPU LOAD</div>
+  <div class="unit" style="left:1806px;top:78px;color:#FF8CC6">%</div>
+  <div class="label" style="left:1340px;top:250px;color:#00E5FF;text-shadow:0 0 10px #00E5FF">RAM</div>
+  <div class="unit" style="left:1806px;top:270px;color:#7FF4FF">GB</div>
+  <div class="rule" style="left:1340px;top:100px;width:230px;background:linear-gradient(90deg,#FF2E97,transparent)"></div>
+  <div class="rule" style="left:1340px;top:292px;width:230px;background:linear-gradient(90deg,#00E5FF,transparent)"></div>
+  <div class="label" style="left:1340px;top:404px;font-size:18px;letter-spacing:4px;color:#8A6FB0">RAM IN USE</div>
+
+  <!-- ---------- live values ---------- -->
+  <div class="big" data-lc="text" data-sensor="CPUTEMP" data-align="right" data-label="CPU temp"
+       style="left:56px;top:130px;width:210px;font-size:140px;color:#00E5FF">58</div>
+  <div class="big" data-lc="text" data-sensor="GPUTEMP" data-align="right" data-label="GPU temp"
+       style="left:330px;top:130px;width:210px;font-size:140px;color:#FF2E97">51</div>
+  <div class="big" data-lc="text" data-sensor="TIME" data-sub="h:m" data-align="center" data-label="Clock"
+       style="left:660px;top:52px;width:600px;text-align:center;font-size:124px;color:#FFF3FB">14:07</div>
+  <div class="big" data-lc="text" data-sensor="GPULOAD" data-align="right" data-label="GPU load"
+       style="left:1580px;top:58px;width:220px;font-size:100px;color:#FF2E97">64</div>
+  <div class="big" data-lc="text" data-sensor="RAM_GB" data-align="right" data-label="RAM used"
+       style="left:1560px;top:250px;width:240px;font-size:100px;color:#00E5FF">23.4</div>
+
+  <!-- live bars (inner segments are just the browser preview) -->
+  <div class="track" data-lc="bar" data-sensor="CPUTEMP" data-segments="16" data-gap="4"
+       data-on="#00E5FF" data-off="#0A2A3A" data-sample="53" style="left:76px;top:330px;width:230px;height:40px"></div>
+  <div class="track" data-lc="bar" data-sensor="GPUTEMP" data-segments="16" data-gap="4"
+       data-on="#FF2E97" data-off="#3A0A28" data-sample="51" style="left:350px;top:330px;width:230px;height:40px"></div>
+  <div class="track" data-lc="bar" data-sensor="GPULOAD" data-segments="30" data-gap="4"
+       data-on="#FF2E97" data-off="#3A0A28" data-sample="64" style="left:1340px;top:176px;width:504px;height:40px"></div>
+  <div class="track" data-lc="bar" data-sensor="RAMLOAD" data-segments="30" data-gap="4"
+       data-on="#00E5FF" data-off="#0A2A3A" data-sample="37" style="left:1340px;top:350px;width:504px;height:40px"></div>
+
+  <script>
+    // Browser preview of the bars only; L-Connect draws them natively.
+    document.querySelectorAll('[data-lc="bar"]').forEach(function (b) {
+      var n = +b.dataset.segments, gap = +b.dataset.gap, lit = Math.round(n * b.dataset.sample / 100);
+      b.style.gap = gap + 'px';
+      for (var k = 0; k < n; k++) {
+        var i = document.createElement('i');
+        i.style.background = k < lit ? b.dataset.on : b.dataset.off;
+        b.appendChild(i);
+      }
+    });
+  </script>
+</body>
+</html>

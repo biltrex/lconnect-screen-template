@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "lconnect-screen-template",
+  "description": "Claude skill for designing native Lian Li L-Connect 3 Universal Screen 8.8\" templates.",
+  "owner": {
+    "name": "biltrex"
+  },
+  "plugins": [
+    {
+      "name": "lconnect-screen-template",
+      "description": "Design live sensor dashboards for the Lian Li Universal Screen 8.8\" just by prompting Claude, or from a Claude Design mockup.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}

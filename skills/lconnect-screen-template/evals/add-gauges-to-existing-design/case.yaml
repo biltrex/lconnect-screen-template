@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: add-gauges-to-existing-design
+expected_outcome: |
+  An updated copy of synthwave.html (original untouched) with a native arc gauge for CPULOAD and a chart for GPULOAD added, keeping the existing live widgets; rebuilt .template passes the device render.

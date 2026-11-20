@@ -1,0 +1,9 @@
+# build output from make_template.py
+build/
+dist/
+*.template
+# Python
+__pycache__/
+*.pyc
+# temporary export pages written next to designs
+.*.lc-export.html

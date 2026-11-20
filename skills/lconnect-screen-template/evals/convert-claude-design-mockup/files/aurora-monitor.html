@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<!--
+  AURORA MONITOR: 1920x480 mockup for the Lian Li Universal Screen 8.8".
+  Widgets are generated from the WIDGETS manifest below; demo data animates every second.
+  ?demo=0 stops the simulated data.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Aurora Monitor</title>
+<style>
+  html, body { margin:0; width:1920px; height:480px; overflow:hidden; background:#070912; }
+  #screen { position:relative; width:1920px; height:480px; font-family:'Segoe UI', sans-serif;
+            text-transform:uppercase; color:#DDE6F5; }
+  .card { position:absolute; border-radius:22px; background:linear-gradient(180deg,#121A2E,#0B1020);
+          box-shadow:0 0 0 1px #1E2A45 inset; }
+  .title { position:absolute; font-size:18px; letter-spacing:6px; color:#7A8BB0; font-weight:600; }
+  .val { position:absolute; font-weight:300; line-height:1; white-space:nowrap; }
+  .meter { position:absolute; border-radius:8px; background:#1A2440; overflow:hidden; }
+  .meter > i { display:block; height:100%; border-radius:8px; }
+  .alert { color:#FF5C7A !important; }
+</style>
+</head>
+<body>
+<div id="screen">
+  <div class="card" style="left:20px;top:20px;width:600px;height:440px"></div>
+  <div class="card" style="left:640px;top:20px;width:600px;height:440px"></div>
+  <div class="card" style="left:1260px;top:20px;width:640px;height:440px"></div>
+  <div class="title" style="left:56px;top:50px">Processor</div>
+  <div class="title" style="left:676px;top:50px">Graphics</div>
+  <div class="title" style="left:1296px;top:50px">System</div>
+  <div id="dyn"></div>
+</div>
+<script>
+(function () {
+  const WIDGETS = [
+    { id: 'cpu-temp', kind: 'value', x: 56,   y: 110, size: 120, color: '#7EE7C7', unit: '°C', alertAt: 85 },
+    { id: 'cpu-load', kind: 'value', x: 340,  y: 110, size: 120, color: '#7EE7C7', unit: '%' },
+    { id: 'cpu-bar',  kind: 'meter', x: 56,   y: 300, w: 528, h: 16, color: '#7EE7C7' },
+    { id: 'cpu-clock',kind: 'value', x: 56,   y: 360, size: 48,  color: '#A9B8D6', unit: 'GHz' },
+    { id: 'gpu-temp', kind: 'value', x: 676,  y: 110, size: 120, color: '#B79CFF', unit: '°C', alertAt: 83 },
+    { id: 'gpu-load', kind: 'value', x: 960,  y: 110, size: 120, color: '#B79CFF', unit: '%' },
+    { id: 'gpu-bar',  kind: 'meter', x: 676,  y: 300, w: 528, h: 16, color: '#B79CFF' },
+    { id: 'vram',     kind: 'value', x: 676,  y: 360, size: 48,  color: '#A9B8D6', unit: 'GB VRAM' },
+    { id: 'time',     kind: 'value', x: 1296, y: 100, size: 110, color: '#FFFFFF' },
+    { id: 'day',      kind: 'value', x: 1296, y: 230, size: 40,  color: '#7A8BB0' },
+    { id: 'ram',      kind: 'value', x: 1296, y: 300, size: 48,  color: '#FFD27E', unit: '% RAM' },
+    { id: 'ram-bar',  kind: 'meter', x: 1296, y: 370, w: 568, h: 16, color: '#FFD27E' },
+    { id: 'net-down', kind: 'value', x: 1620, y: 300, size: 48,  color: '#7EC8FF' },
+  ];
+  const root = document.getElementById('dyn'), els = {};
+  for (const w of WIDGETS) {
+    const el = document.createElement('div');
+    el.dataset.widget = w.id;
+    if (w.kind === 'value') { el.className = 'val'; Object.assign(el.style, { left: w.x + 'px', top: w.y + 'px', fontSize: w.size + 'px', color: w.color }); }
+    else { el.className = 'meter'; Object.assign(el.style, { left: w.x + 'px', top: w.y + 'px', width: w.w + 'px', height: w.h + 'px' });
+           el.innerHTML = `<i style="background:${w.color};width:0"></i>`; }
+    root.appendChild(el); els[w.id] = { el, w };
+  }
+  const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const s = { cpuTemp: 61, cpuLoad: 34, cpuClock: 5.12, gpuTemp: 54, gpuLoad: 47, vram: 7.4, ram: 41, down: 0.82 };
+  const pad = n => String(n).padStart(2, '0');
+  function val(id, v) { const { el, w } = els[id];
+    el.innerHTML = v + (w.unit ? `<span style="font-size:${Math.round(w.size * 0.3)}px;margin-left:6px;color:#7A8BB0">${w.unit}</span>` : '');
+    el.classList.toggle('alert', w.alertAt !== undefined && parseFloat(v) >= w.alertAt); }
+  function meter(id, p) { els[id].el.firstChild.style.width = Math.max(0, Math.min(100, p)) + '%'; }
+  function render() {
+    const d = new Date();
+    val('cpu-temp', s.cpuTemp.toFixed(0)); val('cpu-load', s.cpuLoad.toFixed(0)); meter('cpu-bar', s.cpuLoad);
+    val('cpu-clock', s.cpuClock.toFixed(2));
+    val('gpu-temp', s.gpuTemp.toFixed(0)); val('gpu-load', s.gpuLoad.toFixed(0)); meter('gpu-bar', s.gpuLoad);
+    val('vram', s.vram.toFixed(1));
+    val('time', `${pad(d.getHours())}:${pad(d.getMinutes())}`); val('day', DAYS[d.getDay()]);
+    val('ram', s.ram.toFixed(0)); meter('ram-bar', s.ram);
+    val('net-down', s.down < 1 ? (s.down * 1024).toFixed(0) + ' KB/s' : s.down.toFixed(1) + ' MB/s');
+  }
+  const walk = (v, lo, hi, st) => Math.min(hi, Math.max(lo, v + (Math.random() - 0.5) * 2 * st));
+  render();
+  if (new URLSearchParams(location.search).get('demo') !== '0') setInterval(() => {
+    s.cpuTemp = walk(s.cpuTemp, 40, 92, 2); s.cpuLoad = walk(s.cpuLoad, 2, 100, 8); s.gpuTemp = walk(s.gpuTemp, 35, 88, 2);
+    s.gpuLoad = walk(s.gpuLoad, 0, 100, 8); s.ram = walk(s.ram, 20, 95, 2); s.down = walk(s.down, 0.05, 40, 3); render();
+  }, 1000);
+})();
+</script>
+</body>
+</html>

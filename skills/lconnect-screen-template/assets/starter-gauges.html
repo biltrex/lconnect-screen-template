@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<!-- Gauges starter: one of every native slot kind (see references/design-contract.md).
+     Uses Bahnschrift (ships with Windows for all users). Every [data-lc] element becomes a live
+     L-Connect widget; everything else is flattened into the background image.
+     lc-preview.js draws the browser preview of arcs/bars/charts/needles/rings from their attributes:
+     keep the <script> at the bottom (inline the file's contents if you move this HTML elsewhere). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Gauges starter</title>
+<style>
+  html, body { margin:0; width:1920px; height:480px; overflow:hidden; background:#05070C; }
+  body { position:relative; font-family:'Bahnschrift', sans-serif; color:#E6EDF3; }
+  .abs { position:absolute; }
+  .panel { position:absolute; border:2px solid #1B2A3F; border-radius:20px; background:#0A0F18; }
+  .cap { position:absolute; font-size:20px; font-weight:300; letter-spacing:5px; color:#6E7F99; }
+  .big { position:absolute; font-weight:600; line-height:1; }
+  .unit { position:absolute; font-size:24px; font-weight:300; color:#6E7F99; }
+  [data-lc="text"] { white-space:nowrap; }
+</style>
+</head>
+<body>
+  <!-- ======== static art ======== -->
+  <div class="panel" style="left:16px;top:16px;width:420px;height:448px"></div>
+  <div class="panel" style="left:452px;top:16px;width:600px;height:448px"></div>
+  <div class="panel" style="left:1068px;top:16px;width:400px;height:448px"></div>
+  <div class="panel" style="left:1484px;top:16px;width:420px;height:448px"></div>
+  <div class="cap" style="left:44px;top:36px">CPU</div>
+  <div class="cap" style="left:480px;top:36px">HISTORY</div>
+  <div class="cap" style="left:1096px;top:36px">TEMPERATURE</div>
+  <div class="cap" style="left:1512px;top:36px">TIME</div>
+  <div class="unit" style="left:262px;top:205px">%</div>
+  <div class="cap" style="left:480px;top:206px;font-size:16px">CPU LOAD</div>
+  <div class="cap" style="left:480px;top:330px;font-size:16px">GPU LOAD</div>
+  <div class="cap" style="left:44px;top:388px;font-size:16px">RAM</div>
+  <!-- needle dial ticks (static SVG) -->
+  <svg class="abs" style="left:1118px;top:80px" width="300" height="300" viewBox="0 0 300 300">
+    <g stroke="#2E4466" stroke-width="4" stroke-linecap="round">
+      <line x1="150" y1="20" x2="150" y2="38" transform="rotate(-135 150 150)"/><line x1="150" y1="20" x2="150" y2="38" transform="rotate(-90 150 150)"/>
+      <line x1="150" y1="20" x2="150" y2="38" transform="rotate(-45 150 150)"/><line x1="150" y1="20" x2="150" y2="38"/>
+      <line x1="150" y1="20" x2="150" y2="38" transform="rotate(45 150 150)"/><line x1="150" y1="20" x2="150" y2="38" transform="rotate(90 150 150)"/>
+      <line x1="150" y1="20" x2="150" y2="38" transform="rotate(135 150 150)" stroke="#FF5A5A"/>
+    </g>
+  </svg>
+  <!-- clock face (static SVG) -->
+  <svg class="abs" style="left:1544px;top:72px" width="300" height="300" viewBox="0 0 300 300">
+    <circle cx="150" cy="150" r="140" fill="#0D1522" stroke="#22344F" stroke-width="4"/>
+    <g stroke="#6E7F99" stroke-width="5" stroke-linecap="round">
+      <line x1="150" y1="22" x2="150" y2="40"/><line x1="278" y1="150" x2="260" y2="150"/>
+      <line x1="150" y1="278" x2="150" y2="260"/><line x1="22" y1="150" x2="40" y2="150"/>
+    </g>
+  </svg>
+
+  <!-- ======== live: CPU panel ======== -->
+  <div data-lc="arc" data-sensor="CPULOAD" data-start="226.8" data-sweep="270" data-thickness="26" data-round
+       data-on="#2F81F7" data-gradient="#00E5FF" data-off="#132235" data-sample="64" data-label="CPU load gauge"
+       style="position:absolute;left:66px;top:76px;width:260px;height:260px"></div>
+  <div class="big" data-lc="text" data-sensor="CPULOAD" data-align="right" data-label="CPU load %"
+       style="left:130px;top:166px;width:126px;text-align:right;font-size:80px">64</div>
+  <div data-lc="slider" data-sensor="RAMLOAD" data-knob="26" data-on="#A371F7" data-off="#21183A" data-sample="42"
+       data-label="RAM slider" style="position:absolute;left:44px;top:420px;width:360px;height:10px"></div>
+  <div data-lc="bar" data-sensor="GPURAMLOAD" data-fill="btt" data-segments="12" data-gap="4" data-on="#00E5FF" data-off="#0A2A33"
+       data-sample="58" data-label="VRAM vertical bar" style="position:absolute;left:380px;top:80px;width:28px;height:300px"></div>
+
+  <!-- ======== live: history panel ======== -->
+  <div data-lc="chart" data-sensor="CPULOAD" data-step="8" data-color="#00E5FF" data-fill-color="#00E5FF30" data-line-width="2"
+       data-label="CPU history" style="position:absolute;left:480px;top:80px;width:544px;height:120px"></div>
+  <div data-lc="chart" data-sensor="GPULOAD" data-step="16" data-color="#FF4FA3" data-anchor="right" data-frame="#22344F" data-frame-width="1"
+       data-label="GPU history" style="position:absolute;left:480px;top:236px;width:544px;height:88px"></div>
+  <div data-lc="bar" data-sensor="GPULOAD" data-segments="34" data-gap="4" data-on="#FF4FA3" data-off="#2A1020" data-sample="35"
+       data-label="GPU load bar" style="position:absolute;left:480px;top:362px;width:544px;height:30px"></div>
+  <div data-lc="bar" data-sensor="CPUTEMP" data-radius="8" data-gradient="#FF5A5A" data-on="#FFB000" data-off="#2A2410" data-sample="55"
+       data-label="CPU temp bar" style="position:absolute;left:480px;top:410px;width:544px;height:16px"></div>
+
+  <!-- ======== live: temperature panel ======== -->
+  <div data-lc="needle" data-sensor="CPUTEMP" data-start="-135" data-sweep="270" data-color="#FF5A5A" data-cap="#E6EDF3"
+       data-sample="55" data-label="CPU temp needle" style="position:absolute;left:1118px;top:80px;width:300px;height:300px"></div>
+  <div class="big" data-lc="text" data-sensor="CPUTEMP" data-align="center" data-label="CPU temp"
+       style="left:1168px;top:300px;width:200px;text-align:center;font-size:56px">58</div>
+  <div data-lc="ring" data-style="Ring2" data-sensor="GPUTEMP" data-color1="#FF4FA3" data-color2="#FFB000" data-bg="#2A1020"
+       data-text-color="#E6EDF3" data-sample="51" data-label="GPU temp ring" style="position:absolute;left:1350px;top:378px;width:80px;height:80px"></div>
+
+  <!-- ======== live: clock panel ======== -->
+  <div data-lc="needle" data-sensor="TIME" data-sub="h_12" data-color="#E6EDF3" data-length="80" data-width="10" data-cap="none"
+       data-label="hour hand" style="position:absolute;left:1544px;top:72px;width:300px;height:300px"></div>
+  <div data-lc="needle" data-sensor="TIME" data-sub="m" data-color="#E6EDF3" data-length="118" data-width="6" data-cap="none"
+       data-label="minute hand" style="position:absolute;left:1544px;top:72px;width:300px;height:300px"></div>
+  <div data-lc="needle" data-sensor="TIME" data-sub="s" data-color="#FF5A5A" data-length="128" data-width="2" data-cap="#FF5A5A"
+       data-label="second hand" style="position:absolute;left:1544px;top:72px;width:300px;height:300px"></div>
+  <div class="big" data-lc="text" data-sensor="TIME" data-sub="h:m" data-align="center" data-label="digital time"
+       data-gradient="#00E5FF" data-gradient-dir="1"
+       style="left:1484px;top:394px;width:420px;text-align:center;font-size:52px;color:#FF4FA3">14:07</div>
+
+  <script src="../scripts/lc-preview.js"></script>
+</body>
+</html>
