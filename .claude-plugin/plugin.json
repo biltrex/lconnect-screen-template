@@ -1,6 +1,6 @@
 {
   "name": "lconnect-screen-template",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Design live sensor dashboards for the Lian Li Universal Screen 8.8\" just by prompting Claude, or from a Claude Design mockup. Builds native L-Connect 3 templates (gauges, charts, needles, clocks, bars, text) and checks them against L-Connect's own renderer.",
   "author": {
     "name": "biltrex"
