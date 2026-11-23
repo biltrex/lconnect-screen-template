@@ -124,9 +124,16 @@ More in [internals.md](skills/lconnect-screen-template/references/internals.md).
 
 ## Examples
 
-`examples/` has two designs to try or remix: the car dashboard above, and the synthwave screen. Ask Claude to
-"build examples/dash-cluster/dash-cluster.html into a template". The skill also ships two starter designs in
-`skills/lconnect-screen-template/assets/`.
+`examples/` has three designs to try or remix: the car dashboard above, the synthwave screen, and a
+sci-fi "light table" monitor:
+
+![Light Table template](docs/images/oblivion-light-table.png)
+*A system monitor in the style of the Light Table UI from the film Oblivion (original artwork): concentric
+load/temperature gauges for CPU and GPU, RAM and VRAM rings, network history graphs, on a faint plotting grid.
+`examples/oblivion-light-table/gen.py` regenerates it with your own machine, CPU and GPU names.*
+
+Ask Claude to "build examples/dash-cluster/dash-cluster.html into a template". The skill also ships two starter
+designs in `skills/lconnect-screen-template/assets/`.
 
 ## Credits
 
