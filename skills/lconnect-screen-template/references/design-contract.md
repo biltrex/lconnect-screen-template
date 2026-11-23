@@ -1,10 +1,11 @@
 # Design contract: HTML that converts to a native L-Connect template
 
 A design is one static HTML page. Everything that never changes becomes a single background
-image. Every element marked `data-lc` becomes a native, live L-Connect widget placed exactly where
-it sits in the page. The page doubles as the preview, so it should look finished with sample values.
+image. Every element marked `data-lc` becomes a native L-Connect widget placed exactly where
+it sits in the page. All text, static labels included, should be a slot rather than part of the art,
+so the background can be swapped for a video later. The page doubles as the preview, so it should look finished with sample values.
 
-There are eight slot kinds: `text`, `bar`, `slider`, `arc`, `chart`, `needle`, `ring` and `image`.
+There are nine slot kinds: `text`, `label`, `bar`, `slider`, `arc`, `chart`, `needle`, `ring` and `image`.
 `assets/starter.html` shows text and bars, and `assets/starter-gauges.html` shows every kind.
 
 This file is also the brief to give Claude Design: paste the "Brief for Claude Design" section
@@ -15,7 +16,8 @@ at the end into a Claude Design prompt along with the look you want.
 - `html, body { margin:0; width:1920px; height:480px; overflow:hidden; background:#000 }` for the
   landscape 8.8" screen. Lay everything out in absolute pixels; the export screenshots at exactly 1920×480.
 - Everything outside `data-lc` slots is static art. It can use any CSS, SVG, images or gradients,
-  because it is flattened to one PNG. Dials, tick marks, scales and clock faces belong here.
+  because it is flattened to one PNG. Panels, dials, tick marks, scales and clock faces belong here.
+  Words don't: titles, captions and units are `label` slots.
 - **Keep the art compressible.** Each frame goes to the screen as a PNG under 1 MB; bigger frames are
   dropped and the screen stays black. Avoid noise/grain (`feTurbulence`), fine stripe patterns and large
   diagonal gradients. Smooth vertical gradients, bevels, shadows and glass highlights are fine. The build
@@ -75,6 +77,39 @@ Slots are positioned boxes (`position:absolute` with left/top/width/height). The
   With the unit after the number, use `data-align="right"` and put the unit just to the right of the value box, so
   longer values grow leftward, away from the unit. If the value must stay left-aligned (the left edge lines up
   with other text), put the unit above or below it, or leave room for the widest value before the unit.
+
+**CPU and GPU names** are live text: `data-sensor="CPUMODEL"` / `"GPUMODEL"`, never typed in. They print
+the name as reported (`AMD Ryzen 7 7800X3D`, `NVIDIA GeForce RTX 4080`) in mixed case, so left-align them
+and leave room for about 30 characters.
+
+## `label`: static text
+
+```html
+<span data-lc="label" data-align="left" data-label="CPU caption"
+      style="position:absolute; left:70px; top:210px; font:22px 'Bahnschrift'; color:#6F8C96;
+             text-transform:uppercase; letter-spacing:4px; white-space:nowrap">Processor</span>
+```
+
+- A native L-Connect static-text layer for titles, captions, units, separators and tags. It's drawn above
+  the background, not into it, so the words survive a future video background.
+- Contents = the text: one line, plain, with no child elements. One colour, font, weight and size; split
+  mixed styles into separate labels. `data-align` works as for `text`; without it a label follows its
+  CSS `text-align` (left by default).
+- A label doesn't need `position:absolute`: tag text where it already sits (a span in a flex row, a line in
+  a block). But a label element is hidden when the background is captured, so never tag an element that
+  also draws art (a coloured pill or box with text in it): wrap the text in a `<span data-lc="label">`.
+  Two lines = two labels (`<span data-lc="label">CPU</span><br><span data-lc="label">TEMP</span>`).
+- `text-transform` is applied (the build captures the text as displayed), and `letter-spacing` of 1.5px or
+  more is kept (finer tracking is drawn as plain text, which is nearly as wide). L-Connect draws tracked
+  text one character at a time, and its advances drift from Chrome's on some letter pairs; the build
+  compares glyph positions and splits a label into runs (extra layers) wherever they drift by more than
+  1px. `data-gradient` works as for `text`.
+- A label can't follow a curve or rotate, glow, cast a shadow, have an outline or stroke, be clipped or
+  masked, or sit under other art. If the design depends on one of those, ask the user which they prefer:
+  a plain label, the text baked into the art (it disappears under a video background), or, for a glow or
+  shadow, both: the halo stays in the art (a copy of the text with `color:transparent` keeping its
+  `text-shadow`) and the crisp text on top is a label.
+- Decorative numerals that are part of a dial or scale (tick numbers) may stay in the art; say so.
 
 ## `bar`: linear meter
 
@@ -199,6 +234,9 @@ static art.
 > positioned, fonts embedded, realistic sample values, no animation. Static art (panels, labels, units,
 > dials, ticks, clock faces) is drawn normally. Every LIVE element is an empty, absolutely positioned box
 > (or, for text, a plain-text element) with these attributes:
+> - Static text (titles, captions, units, separators): `data-lc="label" data-align="left|right|center"`, one line
+>   and one style per element. Never draw words into the background art.
+> - CPU/GPU names: `data-lc="text" data-sensor="CPUMODEL|GPUMODEL" data-align="left"`, mixed case, room for ~30 chars.
 > - Number/text: `data-lc="text" data-sensor="<KEY>" data-align="left|right|center"`; the content is only the
 >   sample value; one colour, font and size; optional `data-gradient="<hex>"`.
 > - Linear meter: `data-lc="bar" data-sensor data-on data-off data-sample [data-fill="ltr|rtl|btt|ttb"]
@@ -214,5 +252,5 @@ static art.
 > gradients, because every frame must encode to a PNG under 1 MB or the screen goes black. Smooth vertical
 > gradients, bevels, shadows and glass highlights are fine. Colours can't change with the value, and there's no text-transform on live text. Leave room for the widest
 > value. Sensor keys: CPUTEMP CPULOAD CPUCLOCK_G CPUPWR CPUFAN GPUTEMP GPULOAD GPUCLOCK_G GPUPWR GPUFAN
-> GPURAM(MB) GPURAMLOAD RAM_GB RAMLOAD UPSPEED DOWNSPEED(KB/s); clock: TIME(h:m:s|h:m), DATE(Y-M-D|Y|M|D|M_en),
+> GPURAM(MB) GPURAMLOAD RAM_GB RAMLOAD UPSPEED DOWNSPEED(KB/s) CPUMODEL GPUMODEL; clock: TIME(h:m:s|h:m), DATE(Y-M-D|Y|M|D|M_en),
 > DAY(Day_en → "Thu").

@@ -6,8 +6,9 @@ description: Design and build native Lian Li L-Connect 3 templates (.template fi
 # L-Connect screen templates
 
 Turn a design into a native L-Connect 3 template for the Lian Li Universal Screen 8.8" (1920×480).
-The static art is flattened into one background image. Every live value becomes a real L-Connect
-widget: text, bar, slider, arc gauge, history chart, needle or analog clock hand, Lian Li sensor ring,
+The static art is flattened into one background image. Text is never baked in by default: every label,
+title and unit is a native static-text layer, so the background can later be swapped for a video. Every
+live value becomes a real L-Connect widget: text, bar, slider, arc gauge, history chart, needle or analog clock hand, Lian Li sensor ring,
 or image layer. Text is positioned by rendering it with L-Connect's own engine and nudging it until
 its glyphs line up with the design to within a pixel. The other widgets map their box geometry
 exactly onto the engine's (measured) fields. Every build ends by replaying L-Connect's own per-frame
@@ -34,8 +35,8 @@ If something is missing, say what and how to get it; don't try to work around L-
 ### 1. Get a design that follows the contract
 
 Read `references/design-contract.md` first. It defines the markup the build reads: positioned boxes
-marked `data-lc="text|bar|slider|arc|chart|needle|ring|image"` with a `data-sensor` key and a few
-attributes. `references/sensors.md` lists the keys and exactly what each one prints.
+marked `data-lc="text|label|bar|slider|arc|chart|needle|ring|image"` with a `data-sensor` key and a few
+attributes. Follow the **Text policy** below for every piece of text. `references/sensors.md` lists the keys and exactly what each one prints.
 `references/widgets.md` is the deep reference for what the engine can do (read it for unusual requests).
 
 Where the design comes from:
@@ -52,9 +53,9 @@ Where the design comes from:
   The build injects the script anyway, so the template itself never depends on it.
 - **They have a Claude Design (or other) HTML mockup.** Keep their file untouched and write an adapted
   copy (`<name>.lc.html`):
-  - Mark each live element with `data-lc` and a sensor key.
+  - Mark each live element with `data-lc` and a sensor key, and every piece of static text with `data-lc="label"`.
   - Make its content the sample value in L-Connect's format (`1434` KB/s, not `1.4 MB/s`; `Thu`, not `THURSDAY`).
-  - Move units and labels into separate static elements, and remove `text-transform` from live slots.
+  - Move units and labels into separate `label` elements, and remove `text-transform` from live slots.
   - Replace JS-generated widgets with static markup showing sample values.
 
   If the mockup builds its widgets in JavaScript (common in Claude Design), first freeze it:
@@ -71,6 +72,26 @@ Where the design comes from:
   into empty slots). Leave intentional look-and-feel quirks alone unless asked.
 - **They want to use Claude Design themselves.** Give them the "Brief for Claude Design" section of
   `references/design-contract.md` to paste in with their style request, then continue from their HTML.
+
+### Text policy (applies to every design)
+
+- **Static text is a `label` slot, not background art.** Titles, captions, units (`°C`, `%`, `KB/S`),
+  separators (`:`, `/`), tags and markers all get `data-lc="label"`. The background should hold no text,
+  so it can later be replaced by an animated video without losing the words. Each label is one line in
+  one style; split mixed styles or multiple lines into separate labels.
+- **Hardware names are live.** Show the CPU and GPU with `data-lc="text"` and `CPUMODEL` / `GPUMODEL`
+  (never typed-in model names), so the template adapts to whatever machine it runs on. They print the
+  name as the hardware reports it, in mixed case (`AMD Ryzen 7 7800X3D`, `NVIDIA GeForce RTX 4080`), so
+  left-align them and leave room for long names (about 30 characters, e.g. `Intel Core i9-14900KF`,
+  `AMD Radeon RX 7900 XTX`). A machine name or other text the user types in stays a `label`.
+- **When a label can't do what the design needs, ask; don't silently bake it.** Labels can't follow a
+  curve or rotate, can't have glow, shadow, outline or stroke, can't be clipped or masked by art, and can't
+  be covered by art (they draw above the background). Live model names can't be uppercased. Letter-spaced
+  labels need extra layers where L-Connect's spacing drifts (the build splits them automatically). Where one
+  of these matters to the look, show the user both options (a native label survives a video background
+  but loses that effect; text baked into the art keeps the exact look but disappears under a video) and
+  let them choose. Decorative glyphs that aren't really text (tick numbers on a dial, coordinates woven
+  into a texture) may stay in the art, but say so.
 
 Preview the design before building if the look hasn't been agreed:
 `python -I SKILL/scripts/export_design.py <design.html> <build_dir>`, then view `<build_dir>/ref.png`.
@@ -105,12 +126,14 @@ For a realistic, shaded look, use smooth vertical gradients, bevels, shadows and
 Read every `PROBLEM` line it prints. Each one names the slot and the cause: font not installed for all
 users, text-transform, glyph height mismatch, calibration not converging, and so on. `NOTE` lines are
 smaller mismatches (e.g. dropped letter-spacing); fix them in the design when it's easy, so the
-preview tells the truth.
+preview tells the truth. The `layers:` line counts live text and labels: if the design shows words but
+has no labels, the text went into the background, so fix the markup.
 
 ### 3. Check it visually
 
 Open `-preview-sample.png` and `-design-reference.png` and compare them. They should match apart from
-known native limits: clock hands sit at 12 in the sample render (live on the device), and the browser only
+known native limits: native text runs a few percent wider than Chrome's, letter-spaced labels can be
+slightly uneven, clock hands sit at 12 in the sample render (live on the device), and the browser only
 approximates Lian Li sensor rings. If a value is in the wrong font, the font isn't resolving; if one is misplaced or
 missing, look at `build/isolate/<layer>.png`. Fix the HTML (not the spec) and rebuild, so the design
 stays the source of truth.
@@ -133,6 +156,7 @@ Tell the user:
 - where the template is, and that it's installed (or how to import it)
 - which live widgets it has
 - what differs from the design because of native limits
+- any text left in the background art, and why
 - what's verified (the preview rendered by L-Connect's own engine) and what isn't (it hasn't been seen
   running on their screen until they look)
 

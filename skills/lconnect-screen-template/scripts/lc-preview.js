@@ -126,7 +126,7 @@
   }
 
   function draw() {
-    document.querySelectorAll('[data-lc="text"][data-gradient]').forEach(gradientText);
+    document.querySelectorAll('[data-lc="text"][data-gradient], [data-lc="label"][data-gradient]').forEach(gradientText);
     document.querySelectorAll('[data-lc]').forEach(el => {
       if (el.children.length && el.dataset.preview !== 'auto') return;
       if (el.dataset.preview === 'auto') el.querySelectorAll('canvas').forEach(c => c.remove());

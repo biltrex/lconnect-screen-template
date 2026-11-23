@@ -107,18 +107,25 @@ for t in man['texts']:
     al = ALIGN.get(t['align'], 2)
     ink = t['ink']
     x = {0: ink['x'], 1: ink['x'] + ink['w'] / 2, 2: ink['x'] + ink['w']}[al]
+    static = t.get('static', False)
     digits = t['text'].isdigit() and len(t['text']) > 1
-    if t['spacing'] > 0 and not digits:
+    # letter-spacing needs per-character drawing (FontConfig.interval): fine for digits and plain words,
+    # poor around ':' and '.', so live values keep it only when digit-only.
+    # labels with hairline tracking (<1.5px) draw better as one string: per-character drawing errs by about that much
+    tracked = t['spacing'] > 0 and (digits or (static and len(t['text']) > 1 and t['spacing'] >= 1.5))
+    if t['spacing'] > 0 and not tracked and len(t['text']) > 1 and not static:
         notes.append(f"{t['id']}: letter-spacing {t['spacing']:g}px dropped (only digit-only values keep it); "
                      f"set letter-spacing:0 on this slot in the design so the preview matches")
-    if t['transform'] not in ('none', '') and not t['text'].isdigit():
+    if static and tracked and re.search(r'[:.,]', t['text']):
+        notes.append(f"{t['id']}: letter-spaced label contains ':' '.' or ','; per-character spacing can look uneven around them")
+    if not static and t['transform'] not in ('none', '') and not t['text'].isdigit():
         problems.append(f"{t['id']}: CSS text-transform '{t['transform']}' can't be reproduced natively; "
                         f"L-Connect shows the sensor's own casing (e.g. DAY -> 'Thu').")
     it = dict(type='text', data=t['sensor'], sub=t['sub'], label=t['label'], font=fam, bold=bold, italic=t.get('italic', False),
               gradient=css_hex(t['gradient']) if t.get('gradient') else None, gradientDir=t.get('gradientDir', 1),
               size=max(1, round(t['size'] * 0.75)),            # CSS px -> GDI pt at 96 dpi
-              interval=(-4.0 if t['spacing'] > 0 and digits else 0), color=css_hex(t['color']), align=al,
-              x=round(x), y=round(ink['y']), sample=t['text'] or '0',
+              interval=(-4.0 if tracked else 0), color=css_hex(t['color']), align=al,
+              x=round(x), y=round(ink['y']), sample=t['text'] or '0', text=(t['text'].replace(' ', ' ') if tracked else t['text']) if static else None,
               _box=[min(t['box']['x'], ink['x']), min(t['box']['y'], ink['y']),
                     max(t['box']['w'], ink['w']), max(t['box']['h'], ink['h'])], _id=t['id'])
     items.append(it); texts.append(it)
@@ -302,9 +309,11 @@ ref = np.asarray(Image.open(os.path.join(BUILD, 'ref-text.png')).convert('RGB'))
 # every slot's own area, so a slot's reference ink can't pick up a neighbouring slot
 slot_rects = [(t['id'], t['ink']) for t in man['texts']]   # only other text can appear in the text-only reference
 
-def ref_ink(box, m=3, own=None):
+def ref_mask(box, m=3, own=None, mx=None):
+    """Design ink (text-only reference minus background) around a box, with other text slots masked out."""
     x, y, w, h = box
-    x0, y0, x1, y1 = max(0, int(x - m)), max(0, int(y - m)), min(W, int(x + w + m + 1)), min(H, int(y + h + m + 1))
+    mx = m if mx is None else mx
+    x0, y0, x1, y1 = max(0, int(x - mx)), max(0, int(y - m)), min(W, int(x + w + mx + 1)), min(H, int(y + h + m + 1))
     d = np.abs(ref[y0:y1, x0:x1] - bg[y0:y1, x0:x1]).sum(axis=2) > 90
     for sid, r in slot_rects:
         if sid == own: continue
@@ -312,47 +321,101 @@ def ref_ink(box, m=3, own=None):
         ax1, ay1 = min(x1, int(np.ceil(r['x'] + r['w']))), min(y1, int(np.ceil(r['y'] + r['h'])))
         if ax0 < ax1 and ay0 < ay1:
             d[ay0 - y0:ay1 - y0, ax0 - x0:ax1 - x0] = False
+    return d, x0, y0
+
+def ref_ink(box, m=3, own=None, mx=None):
+    d, x0, y0 = ref_mask(box, m, own, mx)
     ys, xs = np.nonzero(d)
     return (x0 + xs.min(), y0 + ys.min(), x0 + xs.max(), y0 + ys.max()) if len(xs) else None
 
+def blobs(mask, x0=0):
+    """Column runs of ink (one per glyph in letter-spaced text): [(first col, last col)]."""
+    cols = np.concatenate([[False], mask.any(axis=0), [False]])
+    e = np.flatnonzero(cols[1:] != cols[:-1])
+    return [(x0 + a, x0 + b - 1) for a, b in zip(e[::2], e[1::2])]
+
+NBSP = ' '
+def split_uneven(it):
+    """Letter-spaced labels are drawn a character at a time with GDI advances, which drift from Chrome's on some
+    glyph pairs. Compare glyph positions; where they drift > 1px, split the label into runs (each its own layer)."""
+    al = np.asarray(Image.open(os.path.join(iso, f'{items.index(it)}.png')).convert('RGBA'))[:, :, 3] > 60
+    nb = blobs(al)
+    d, x0, _ = ref_mask(it.get('_rbox', it['_box']), own=it['_id'], mx=it.get('_mx'))
+    rb = blobs(d, x0)
+    chars = [i for i, c in enumerate(it['text']) if c not in (' ', NBSP)]
+    if len(rb) != len(chars) or len(chars) < 2 or len(nb) > len(rb) or not nb:
+        return None                                    # design glyphs touch, or a native glyph splits: leave as is
+    # pair each design glyph with the native blob it overlaps most; glyphs that native drawing pushed together
+    # share a blob, which is drift too, so a run must start there
+    own = [max(range(len(nb)), key=lambda j: min(r[1], nb[j][1]) - max(r[0], nb[j][0])) for r in rb]
+    dev = [None if i and own[i] == own[i - 1] else nb[own[i]][0] - rb[i][0] for i in range(len(rb))]
+    runs, start = [], 0
+    for i in range(1, len(dev)):
+        if dev[i] is None or dev[start] is None or abs(dev[i] - dev[start]) > 1:
+            runs.append((start, i - 1)); start = i
+    runs.append((start, len(dev) - 1))
+    if len(runs) == 1: return None
+    bx = it['_box']; out = []
+    for k, (g0, g1) in enumerate(runs):
+        t = it['text'][chars[g0]:chars[g1] + 1]
+        n = dict(it, text=t, sample=t.replace(NBSP, ' '), align=0, label=f"{it['label']} {k + 1}",
+                 x=int(it['x'] if it['align'] == 0 and k == 0 else rb[g0][0]),
+                 interval=it['interval'] if g1 > g0 else 0,
+                 _rbox=[rb[g0][0], bx[1], rb[g1][1] - rb[g0][0] + 1, bx[3]], _mx=0)
+        n['_box'] = n['_rbox']
+        out.append(n)
+    return out
+
 iso = os.path.join(BUILD, 'isolate')
-for p in range(a.passes):
-    write_spec()
-    shutil.rmtree(iso, ignore_errors=True)
-    build(os.path.join(BUILD, 'cal.template'), os.path.join(BUILD, 'calibrate.png'), True, False, iso)
-    worst = 0
-    for it in texts:
-        al = np.asarray(Image.open(os.path.join(iso, f'{items.index(it)}.png')).convert('RGBA'))[:, :, 3]
-        ys, xs = np.nonzero(al > 60)
-        r = ref_ink(it['_box'], own=it['_id'])
-        if not len(xs) or not r:
-            if p == 0: problems.append(f"{it['_id']}: nothing visible to calibrate (empty sample or same colour as background)")
-            continue
-        q = (xs.min(), ys.min(), xs.max(), ys.max())
-        dx = {2: r[2] - q[2], 1: (r[0] + r[2]) / 2 - (q[0] + q[2]) / 2, 0: r[0] - q[0]}[it['align']]
-        dy = r[3] - q[3]                                   # baselines (bottom of ink)
-        it['x'] = int(it['x'] + round(dx)); it['y'] = int(it['y'] + round(dy))
-        if it['interval']:
-            dw = ((r[2] - r[0]) - (q[2] - q[0])) / (len(it['sample']) - 1)
-            it['interval'] = round(it['interval'] + dw, 2) or 0.01
-            worst = max(worst, abs(dw) * (len(it['sample']) - 1))
-        it['_h'] = (int(r[3] - r[1]), int(q[3] - q[1]))
-        worst = max(worst, abs(dx), abs(dy))
-    for it in rings:
-        al = np.asarray(Image.open(os.path.join(iso, f'{items.index(it)}.png')).convert('RGBA'))[:, :, 3]
-        ys, xs = np.nonzero(al > 60)
-        if not len(xs): continue
-        bx = it['_box']; inkw = xs.max() - xs.min() + 1
-        z = round(it['fields']['ZoomRate'] * min(bx['w'], bx['h']) / inkw, 4)
-        dz = abs(z - it['fields']['ZoomRate']) * inkw / max(it['fields']['ZoomRate'], 1e-3)
-        it['fields']['ZoomRate'] = z; it['styleInfo']['ZoomRate'] = z
-        dx = bx['x'] + (bx['w'] - inkw) / 2 - xs.min(); dy = bx['y'] + (bx['h'] - (ys.max() - ys.min() + 1)) / 2 - ys.min()
-        it['x'] = int(round(it['x'] + dx)); it['y'] = int(round(it['y'] + dy))
-        worst = max(worst, abs(dx), abs(dy), dz)
-    print(f'calibration pass {p + 1}: worst offset {worst:.0f}px' + (' (aligning native text to the design; normally converges to <=1px in 2-3 passes)' if p == 0 else ''))
-    if worst <= 1: break
-else:
-    problems.append(f'calibration did not fully converge (last worst offset {worst:.0f}px)')
+def calibrate(first):
+  for p in range(a.passes):
+      write_spec()
+      shutil.rmtree(iso, ignore_errors=True)
+      build(os.path.join(BUILD, 'cal.template'), os.path.join(BUILD, 'calibrate.png'), True, False, iso)
+      worst = 0
+      for it in texts:
+          al = np.asarray(Image.open(os.path.join(iso, f'{items.index(it)}.png')).convert('RGBA'))[:, :, 3]
+          ys, xs = np.nonzero(al > 60)
+          r = ref_ink(it['_box'], own=it['_id'], mx=it.get('_mx'))
+          if not len(xs) or not r:
+              if p == 0 and first: problems.append(f"{it['_id']}: nothing visible to calibrate (empty sample or same colour as background)")
+              continue
+          q = (xs.min(), ys.min(), xs.max(), ys.max())
+          dx = {2: r[2] - q[2], 1: (r[0] + r[2]) / 2 - (q[0] + q[2]) / 2, 0: r[0] - q[0]}[it['align']]
+          dy = r[3] - q[3]                                   # baselines (bottom of ink)
+          it['x'] = int(it['x'] + round(dx)); it['y'] = int(it['y'] + round(dy))
+          if it['interval']:
+              dw = ((r[2] - r[0]) - (q[2] - q[0])) / max(1, len(it['sample']) - 1)
+              it['interval'] = round(it['interval'] + dw, 2) or 0.01
+              worst = max(worst, abs(dw) * (len(it['sample']) - 1))
+          it['_h'] = (int(r[3] - r[1]), int(q[3] - q[1]))
+          worst = max(worst, abs(dx), abs(dy))
+      for it in rings:
+          al = np.asarray(Image.open(os.path.join(iso, f'{items.index(it)}.png')).convert('RGBA'))[:, :, 3]
+          ys, xs = np.nonzero(al > 60)
+          if not len(xs): continue
+          bx = it['_box']; inkw = xs.max() - xs.min() + 1
+          z = round(it['fields']['ZoomRate'] * min(bx['w'], bx['h']) / inkw, 4)
+          dz = abs(z - it['fields']['ZoomRate']) * inkw / max(it['fields']['ZoomRate'], 1e-3)
+          it['fields']['ZoomRate'] = z; it['styleInfo']['ZoomRate'] = z
+          dx = bx['x'] + (bx['w'] - inkw) / 2 - xs.min(); dy = bx['y'] + (bx['h'] - (ys.max() - ys.min() + 1)) / 2 - ys.min()
+          it['x'] = int(round(it['x'] + dx)); it['y'] = int(round(it['y'] + dy))
+          worst = max(worst, abs(dx), abs(dy), dz)
+      print(f'calibration pass {p + 1}: worst offset {worst:.0f}px' + (' (aligning native text to the design; normally converges to <=1px in 2-3 passes)' if p == 0 and first else ''))
+      if worst <= 1: return
+  problems.append(f'calibration did not fully converge (last worst offset {worst:.0f}px)')
+
+calibrate(True)
+for rnd in range(3):                                   # split letter-spaced labels whose spacing drifts, recalibrate
+    todo = [(it, split_uneven(it)) for it in texts if it['text'] and it['interval']]   # decide on this round's images
+    changed = 0
+    for it, parts in todo:
+        if not parts: continue
+        i, j = items.index(it), texts.index(it)
+        items[i:i + 1] = parts; texts[j:j + 1] = parts; changed += 1
+    if not changed: break
+    print(f'letter-spacing: split {changed} label(s) where native glyph spacing drifted from the design; recalibrating')
+    calibrate(False)
 for it in texts:
     hr, hq = it.pop('_h', (0, 0))
     if hr and abs(hr - hq) > max(3, hr * 0.12):
@@ -394,7 +457,7 @@ for line in log.splitlines():
     if 'WARNING' in line: problems.append(line.strip())
 print(f"\nTEMPLATE {tpl}")
 from collections import Counter
-print(f"layers: 1 background + {len(texts)} text + " + ', '.join(f'{v} {k}' for k, v in Counter(x['kind'] for x in man['slots']).items()) + f"   (theme settings inherited from stock template {os.path.basename(SEED)})")
+print(f"layers: 1 background + {sum(1 for t in texts if not t['text'])} live text + {sum(1 for t in texts if t['text'])} label + " + ', '.join(f'{v} {k}' for k, v in Counter(x['kind'] for x in man['slots']).items()) + f"   (theme settings inherited from stock template {os.path.basename(SEED)})")
 print('compare: ' + os.path.join(OUT, a.name + '-preview-sample.png') + '  vs  ' + os.path.join(OUT, a.name + '-design-reference.png'))
 for n in dict.fromkeys(notes):
     print('NOTE', n)

@@ -14,7 +14,7 @@ The text widget prints the bare value; it never adds the unit, so put units in s
 | `CPUPWR` / `GPUPWR` | power | `200` | W | – |
 | `CPUFAN` / `GPUFAN` | fan | `1888` | RPM | – |
 | `CPUVOLTAGE` / `GPUVOLTAGE` | voltage | `1.8` | V | – |
-| `CPUMODEL` / `GPUMODEL` | model name | `I9 10900K` | – | – |
+| `CPUMODEL` / `GPUMODEL` | model name as the hardware reports it, mixed case. Use these instead of typed-in names | `AMD Ryzen 7 7800X3D`, `NVIDIA GeForce RTX 4080` | – | – |
 | `RAM_GB` | RAM used | `23.4` | GB | – |
 | `RAMTOTAL_GB` / `RAMVALID_GB` | RAM total / free | `64.0` | GB | – |
 | `RAM` / `RAMTOTAL` / `RAMVALID` | RAM used / total / free | `23960` | MB | – |

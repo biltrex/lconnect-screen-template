@@ -2,15 +2,16 @@
 "Light Table" UI from the film Oblivion. Original artwork; static art is SVG, live slots follow the
 data-lc contract (skills/lconnect-screen-template/references/design-contract.md).
 
-  python gen.py --name "MY RIG" --cpu "AMD RYZEN 7 7800X3D" --gpu "NVIDIA GEFORCE RTX 4080"
+  python gen.py --name "MY RIG"
+
+CPU and GPU names are live L-Connect sensors, so they follow whatever PC runs the template.
+All other text is native label layers, not background art.
 
 Colours, grid strength (GRID, GRID_LINE, GRID_DOT) and network graph scales (NETMAX) are constants below."""
 import argparse, math, os
 
 ap = argparse.ArgumentParser(description="Generate the Oblivion Light Table design")
 ap.add_argument("--name", default="WORKSTATION", help="machine name shown top left")
-ap.add_argument("--cpu", default="AMD RYZEN 7 7800X3D", help="CPU name (static text)")
-ap.add_argument("--gpu", default="NVIDIA GEFORCE RTX 4080", help="GPU name (static text)")
 ap.add_argument("--preview-js", default="../../skills/lconnect-screen-template/scripts/lc-preview.js", help="path to lc-preview.js for the browser preview")
 ap.add_argument("--out", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "oblivion-light-table.html"))
 args = ap.parse_args()
@@ -44,9 +45,16 @@ def bracket(x, y, w, h, l=14, c=DIM):
 def cross(x, y, s=6, c=DIM):
     return f'<path d="M{x-s},{y} H{x+s} M{x},{y-s} V{y+s}" stroke="{c}" stroke-width="1"/>'
 
+LBL = []   # static text: native L-Connect label layers, never baked into the background art
 def label(x, y, t, c=DIM, size=13, sp=3, anchor="start", w=400):
-    return (f'<text x="{x}" y="{y}" fill="{c}" font-size="{size}" letter-spacing="{sp}" font-weight="{w}" '
-            f'text-anchor="{anchor}">{t}</text>')
+    """A label whose baseline sits at y (like SVG text). Returns '' so S(label(...)) still reads naturally."""
+    BW = 600                                    # box width for centred / right-anchored labels
+    left = {"start": x, "middle": x - BW / 2, "end": x - BW}[anchor]
+    al = {"start": "left", "middle": "center", "end": "right"}[anchor]
+    width = "" if anchor == "start" else f"width:{BW}px;"
+    LBL.append(f'<div class="s" data-lc="label" data-align="{al}" style="left:{left:g}px;top:{y - 0.79 * size:g}px;{width}'
+               f'text-align:{al};font-size:{size}px;font-weight:{w};letter-spacing:{sp}px;color:{c}">{t}</div>')
+    return ""
 
 # ---------------------------------------------------------------- static art (one full-size SVG)
 svg = []
@@ -62,7 +70,7 @@ for gx, gy, tag in ((13, 1, "26 016"), (25, 12, "26 018"), (25, 1, "04 049")):
     x, y = 24 + gx * GRID, 28 + gy * GRID
     S(f'<rect x="{x-4}" y="{y-4}" width="9" height="9" fill="none" stroke="#4E8C99" stroke-width="1"/>'
       f'<rect x="{x-1}" y="{y-1}" width="3" height="3" fill="#4E8C99"/>')
-    S(f'<text x="{x+10}" y="{y+4}" fill="#3E5A66" font-size="10" letter-spacing="1">{tag}</text>')
+    S(label(x + 10, y + 4, tag, "#3E5A66", 10, 1))
 # outer frame: hairline rule top and bottom with registration marks
 S(f'<path d="M24,28 H1896 M24,452 H1896" stroke="{FAINT}" stroke-width="1"/>')
 for x in range(24, 1897, 48):
@@ -156,28 +164,28 @@ def text(sensor, x, y, w, size, color, sample, align="right", weight=300, sub=No
     L.append(f'<div class="v" data-lc="text" data-sensor="{sensor}"{s} data-align="{align}" data-label="{label or sensor}" '
              f'style="left:{x}px;top:{y}px;width:{w}px;font-size:{size}px;font-weight:{weight};color:{color};text-align:{align};{extra}">{sample}</div>')
 def unit(x, y, t, size=20, color=DIM):
-    L.append(f'<div class="u" style="left:{x}px;top:{y}px;font-size:{size}px;color:{color}">{t}</div>')
+    L.append(f'<div class="u" data-lc="label" data-align="left" style="left:{x}px;top:{y}px;font-size:{size}px;color:{color}">{t}</div>')
 def arc(sensor, x, y, size, th, on, off, sample, label, start=226.8, sweep=270, extra=""):
     L.append(f'<div data-lc="arc" data-sensor="{sensor}" data-start="{start}" data-sweep="{sweep}" data-thickness="{th}" '
              f'data-on="{on}" data-off="{off}" data-sample="{sample}" data-label="{label}" {extra} '
              f'style="position:absolute;left:{x}px;top:{y}px;width:{size}px;height:{size}px"></div>')
 
-# left column: names are static text (not sensors) like the LCARS screen
-L.append(f'<div class="s" style="left:124px;top:84px;font-size:32px;font-weight:300;letter-spacing:6px;color:{ICE}">{args.name}</div>')
-L.append(f'<div class="s" style="left:128px;top:141px;font-size:19px;font-weight:300;letter-spacing:1px;color:{ICE};line-height:26px">{args.cpu}</div>')
-L.append(f'<div class="s" style="left:128px;top:185px;font-size:19px;font-weight:300;letter-spacing:1px;color:{ICE};line-height:26px">{args.gpu}</div>')
+# left column: machine name is a label; CPU / GPU names are live sensors, so the template adapts to any PC
+L.append(f'<div class="s" data-lc="label" data-align="left" data-label="Machine name" style="left:124px;top:84px;font-size:32px;font-weight:300;letter-spacing:6px;color:{ICE}">{args.name}</div>')
+text("CPUMODEL", 128, 145, 276, 19, ICE, "AMD Ryzen 7 7800X3D", "left", 300, label="CPU model", extra="letter-spacing:0")
+text("GPUMODEL", 128, 189, 276, 19, ICE, "NVIDIA GeForce RTX 4080", "left", 300, label="GPU model", extra="letter-spacing:0")
 # clock 14 : 07 : 23 as three tracked slots with static colons
 for i, (sub, smp) in enumerate((("h_24", "14"), ("m", "07"), ("s", "23"))):
     text("TIME", 54 + i * 124, 262, 104, 84, ICE if i < 2 else CYAN, smp, "center", 300, sub, f"Time {sub}")
 for x in (160, 284):
-    L.append(f'<div class="s" style="left:{x}px;top:270px;font-size:70px;font-weight:300;color:{DIM}">:</div>')
+    L.append(f'<div class="s" data-lc="label" data-align="left" style="left:{x}px;top:270px;font-size:70px;font-weight:300;color:{DIM}">:</div>')
 # date: Thu  11 . 19 . 2026
 text("DAY", 160, 368, 70, 28, CYAN, "Thu", "left", 400, "Day_en", "Weekday", "letter-spacing:0")
 text("DATE", 232, 368, 36, 28, ICE, "11", "center", 300, "M", "Month")
 text("DATE", 278, 368, 36, 28, ICE, "19", "center", 300, "D", "Day")
 text("DATE", 326, 368, 80, 28, ICE, "2026", "left", 300, "Y", "Year")
 for x in (268, 314):
-    L.append(f'<div class="s" style="left:{x}px;top:368px;font-size:28px;font-weight:300;color:{DIM}">.</div>')
+    L.append(f'<div class="s" data-lc="label" data-align="left" style="left:{x}px;top:368px;font-size:28px;font-weight:300;color:{DIM}">.</div>')
 
 # CPU / GPU gauges: outer segmented load arc, inner thin temperature arc
 for L0, p, load, temp, tmax in ((456, "CPU", 23, 58, 110), (856, "GPU", 34, 51, 100)):
@@ -221,6 +229,7 @@ html = f"""<!DOCTYPE html>
 </style></head>
 <body>
 {svg_html}
+{chr(10).join(LBL)}
 {chr(10).join(L)}
 <script src="{args.preview_js}"></script>
 </body></html>

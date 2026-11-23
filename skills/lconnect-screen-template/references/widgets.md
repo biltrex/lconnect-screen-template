@@ -43,7 +43,9 @@ A spec item `{"type":"widget","class":"<Graph…>", "x":…, "y":…, "data":"<s
 - `interval` = per-character spacing, but it uses per-character drawing (bad with `:` and `.`; fine for digits).
 - **Multi-line static text**: put `\r\n` in the value/content and set `LineHeight` (px). Without it, lines overlap.
 - `m_data.ShowUnit` has no visible effect (Render draws `Value` only). Put units in static art or a static text layer.
-- Static text: `data: "StaticText"`, with the text in `Value` **and** `ValueWithUnit` (and `content`). Never call
+- Static text (`data-lc="label"`): `data: "StaticText"`, with the text in `Value` **and** `ValueWithUnit` (and `content`).
+  With `interval` set (letter-spacing), spaces must be non-breaking (U+00A0): a plain space measures ~0 in
+  per-character drawing, so the words run together. The build does this. Never call
   `ResetValue()` on static text before saving: it turns the text into "0" (verified on the device routine).
 
 ## Bar: `GraphStatuBar` (TypeName `StatuBar`)

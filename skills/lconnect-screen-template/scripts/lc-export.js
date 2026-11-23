@@ -8,7 +8,8 @@
 (function () {
   const mode = new URLSearchParams(location.search).get('lc');
   if (mode !== 'ref' && mode !== 'bg' && mode !== 'text') return;
-  const KINDS = ['text', 'bar', 'slider', 'arc', 'chart', 'needle', 'ring', 'image'];
+  const KINDS = ['text', 'label', 'bar', 'slider', 'arc', 'chart', 'needle', 'ring', 'image'];
+  const TEXTY = ['text', 'label'];   // label = static text widget (L-Connect StaticText), not baked into the background
   const NEED_SENSOR = ['text', 'bar', 'slider', 'arc', 'chart', 'needle'];
 
   function run() {
@@ -28,14 +29,31 @@
       if (!KINDS.includes(kind)) { out.errors.push(`${id}: unknown data-lc="${kind}" (use ${KINDS.join(', ')})`); return; }
       if (NEED_SENSOR.includes(kind) && !el.dataset.sensor) { out.errors.push(`${id}: missing data-sensor`); return; }
       if (r.width < 1 || r.height < 1) { out.errors.push(`${id}: slot has no size (give it width/height)`); return; }
-      if (kind === 'text') {
+      if (kind === 'label' && el.dataset.sensor) { out.errors.push(`${id}: a label is static text; use data-lc="text" for a sensor`); return; }
+      if (TEXTY.includes(kind)) {
+        const lit = kind === 'label' ? el.innerText.trim() : el.textContent.trim();   // innerText applies text-transform
+        if (kind === 'label' && lit.includes('\n')) { out.errors.push(`${id}: a label is one line; split it into one label per line`); return; }
+        if (kind === 'label' && el.children.length) { out.errors.push(`${id}: a label holds plain text only (no child elements); split styled parts into separate labels`); return; }
         const range = document.createRange(); range.selectNodeContents(el);
         const tr = range.getBoundingClientRect();
         const cs = getComputedStyle(el);
+        // the range box is the font's whole line box; narrow it to the glyphs' real vertical extent so a
+        // neighbour's box (used to mask its ink out of this slot's reference) doesn't swallow this slot's ink
+        let iy = tr.top, ih = tr.height;
+        try {
+          const cx = (measure.cv || (measure.cv = document.createElement('canvas'))).getContext('2d');
+          cx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+          const m = cx.measureText(lit);
+          if (m.fontBoundingBoxAscent && (m.actualBoundingBoxAscent || m.actualBoundingBoxDescent)) {
+            const base = tr.top + m.fontBoundingBoxAscent;
+            iy = Math.max(tr.top, base - m.actualBoundingBoxAscent - 1);
+            ih = Math.min(tr.top + tr.height, base + m.actualBoundingBoxDescent + 1) - iy;
+          }
+        } catch (e) {}
         out.texts.push({
-          id, sensor: el.dataset.sensor, sub: el.dataset.sub || null,
-          align: el.dataset.align || 'right', label: el.dataset.label || id,
-          text: el.textContent.trim(), box, ink: { x: tr.left, y: tr.top, w: tr.width, h: tr.height },
+          id, sensor: kind === 'label' ? 'StaticText' : el.dataset.sensor, static: kind === 'label', sub: el.dataset.sub || null,
+          align: el.dataset.align || (kind === 'label' ? ({ right: 'right', end: 'right', center: 'center' }[cs.textAlign] || 'left') : 'right'), label: el.dataset.label || id,
+          text: lit, box, ink: { x: tr.left, y: iy, w: tr.width, h: ih },
           size: parseFloat(cs.fontSize), weight: +cs.fontWeight || 400, italic: cs.fontStyle === 'italic',
           family: cs.fontFamily.split(',')[0].replace(/["']/g, '').trim(),
           font: el.dataset.font || null, color: cs.color,
@@ -56,7 +74,7 @@
     });
     if (mode === 'bg') slots.forEach(el => { el.style.visibility = 'hidden'; });
     // text-only reference: hide the non-text slots (their previews) so text ink can be measured alone
-    if (mode === 'text') slots.forEach(el => { if (el.dataset.lc !== 'text') el.style.visibility = 'hidden'; });
+    if (mode === 'text') slots.forEach(el => { if (!TEXTY.includes(el.dataset.lc)) el.style.visibility = 'hidden'; });
     const pre = document.createElement('pre');
     pre.id = 'lc-manifest'; pre.style.display = 'none';
     pre.textContent = JSON.stringify(out);

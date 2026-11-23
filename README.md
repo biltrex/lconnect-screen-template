@@ -21,7 +21,9 @@ All of these are native L-Connect widgets, updated live by L-Connect:
 
 | Widget | Examples |
 |---|---|
-| Numbers and text | CPU/GPU temperature, load, clocks, power, fans, RAM/VRAM, network, FPS, model names, time/date/weekday. Any installed font, bold/italic, gradient text |
+| Numbers and text | CPU/GPU temperature, load, clocks, power, fans, RAM/VRAM, network, FPS, time/date/weekday. Any installed font, bold/italic, gradient text |
+| CPU and GPU names | read live from the hardware, so a template adapts to whatever PC it runs on |
+| Labels | titles, captions and units as native text layers, not part of the background image |
 | Bars | horizontal or vertical, solid, segmented, gradient, outlined, rounded |
 | Sliders | a bar with a round knob |
 | Arc gauges | rings, 270° gauges, half arcs, pies; segmented, rounded, gradient |
@@ -30,8 +32,10 @@ All of these are native L-Connect widgets, updated live by L-Connect:
 | Lian Li sensor rings | L-Connect's own Ring1–Ring5 gauge styles |
 | Image layers | artwork that sits above live widgets |
 
-Everything else in your design (panels, dials, tick marks, glows, gradients, labels) is flattened into the
-background image, so you can design freely in HTML/CSS/SVG.
+Everything else in your design (panels, dials, tick marks, glows, gradients) is flattened into the
+background image, so you can design freely in HTML/CSS/SVG. Text stays out of the background by default,
+ready for animated video backgrounds later. When a text effect only works in the artwork (curved text, glows,
+outlines), Claude asks before baking it in.
 
 ## Requirements
 
